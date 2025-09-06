@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
-import sys
 from datetime import timedelta
 
 from django.contrib.messages import constants as mensajes
@@ -28,12 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-yujkf=!kd56hv991ld4qv3717n-1q9ftigs$1r9=)vb5wkfmh+')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# SECURITY WARNING: don't run with debug turned on in production!
-# Allow easy local development: enable DEBUG when running the development
-# server or when the environment variable `DJANGO_DEBUG` is set to '1'.
-DEBUG = os.environ.get('DJANGO_DEBUG', '') == '1' or any(x in sys.argv for x in ('runserver', 'runserver_plus'))
+DEBUG = False
 
 ALLOWED_HOSTS = ['ricardo397.pythonanywhere.com',
+                 'lynxiyo.pythonanywhere.com'
                  'localhost',
                  '127.0.0.1']  # For testing only - restrict in production
 
@@ -218,10 +215,11 @@ CACHES = {
     }
 }
 
-# --- Security defaults (production) ---
-# These are safe defaults; they will be relaxed automatically when DEBUG is enabled
+CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+
+# Configuraciones de Seguridad
 SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_SECONDS = 31536000  # 1 año
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
@@ -230,44 +228,14 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
-# CORS configuration (production safe list)
+# Configuración CORS más segura
 CORS_ALLOWED_ORIGINS = [
     "https://hecit.pythonanywhere.com",
+    # Añade otros dominios permitidos si es necesario
 ]
 
-# Session security settings (production defaults)
-SESSION_COOKIE_AGE = 3600  # 1 hour
+# Session security settings
+SESSION_COOKIE_AGE = 3600  # 1 hora
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
-
-# Development overrides: when DEBUG is enabled we relax strict security settings
-# to avoid development server HTTPS/redirect noise and allow local testing.
-if DEBUG:
-    # Don't force HTTPS locally
-    SECURE_SSL_REDIRECT = False
-
-    # Disable HSTS locally
-    SECURE_HSTS_SECONDS = 0
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-    SECURE_HSTS_PRELOAD = False
-
-    # Allow non-secure cookies in dev
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-
-    # Reduce strict browser filters during development
-    SECURE_BROWSER_XSS_FILTER = False
-    SECURE_CONTENT_TYPE_NOSNIFF = False
-
-    # Relax frame options for local debugging (change back for production)
-    X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-    # Allow all CORS origins in development for convenience
-    CORS_ALLOW_ALL_ORIGINS = True
-
-    # Suppress the repeated TLS-handshake warning messages during development
-    # These occur when something tries HTTPS against the HTTP dev server
-    import logging
-    logging.getLogger('django.server').setLevel(logging.CRITICAL)
-
