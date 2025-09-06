@@ -1,0 +1,803 @@
+<!-- Modern Category Filter System -->
+<div class="modern-filter-container mb-4">
+    <div class="filter-header">
+        <h3 class="filter-title">
+            <i class="fas fa-filter me-2"></i>
+            Filtros de Inventario
+        </h3>
+        <button type="button" class="btn-filter-toggle d-md-none" onclick="toggleMobileFilters()">
+            <i class="fas fa-sliders-h"></i>
+        </button>
+    </div>
+
+    <div class="filter-content" id="filterContent">
+        <form method="get" class="modern-filter-form" id="filterForm">
+            <div class="filter-grid">
+                <!-- Search Input -->
+                <div class="filter-group search-group">
+                    <label class="filter-label">
+                        <i class="fas fa-search me-2"></i>
+                        Buscar Material
+                    </label>
+                    <div class="search-input-container">
+                        <input type="search" 
+                               id="searchInput"
+                               name="search" 
+                               class="form-control-modern search-input" 
+                               value="{{ search_query|default:'' }}" 
+                               placeholder="Nombre, código o descripción..."
+                               autocomplete="off">
+                        <div class="search-actions">
+                            {% if search_query %}
+                            <button type="button" class="btn-clear-search" onclick="clearSearch()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-tags me-2"></i>
+                        Categoría
+                    </label>
+                    <div class="category-select-container">
+                        <select id="categoriaSelect" name="categoria" class="form-control-modern category-select">
+                            <option value="">Todas las categorías</option>
+                            {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}" 
+                                        {% if categoria.id|stringformat:"s" == categoria_seleccionada %}selected{% endif %}>
+                                    {{ categoria.nombre }}
+                                    {% if categoria.material_count %}
+                                        ({{ categoria.material_count }})
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        
+                        {% if request.resolver_match.url_name == 'editar_inventario' and user.is_superuser %}
+                        <div class="category-actions">
+                            <div class="dropdown">
+                                <button type="button" 
+                                        class="btn-category-actions dropdown-toggle"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        title="Gestionar categorías">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark">
+                                    <li>
+                                        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nuevaCategoriaModal">
+                                            <i class="fas fa-plus me-2"></i>Crear categoría
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editarCategoriaModal">
+                                            <i class="fas fa-edit me-2"></i>Modificar categoría
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#eliminarCategoriaModal">
+                                            <i class="fas fa-trash me-2"></i>Eliminar categoría
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Price Range Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-dollar-sign me-2"></i>
+                        Rango de Precio
+                    </label>
+                    <div class="price-range-container">
+                        <div class="price-inputs">
+                            <input type="number" 
+                                   name="precio_min" 
+                                   class="form-control-modern price-input" 
+                                   value="{{ request.GET.precio_min }}" 
+                                   placeholder="Mín" 
+                                   step="0.01">
+                            <span class="price-separator">-</span>
+                            <input type="number" 
+                                   name="precio_max" 
+                                   class="form-control-modern price-input" 
+                                   value="{{ request.GET.precio_max }}" 
+                                   placeholder="Máx" 
+                                   step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-boxes me-2"></i>
+                        Disponibilidad
+                    </label>
+                    <div class="stock-filter-container">
+                        <select name="stock" class="form-control-modern">
+                            <option value="">Todos los productos</option>
+                            <option value="disponible" {% if request.GET.stock == 'disponible' %}selected{% endif %}>
+                                En stock
+                            </option>
+                            <option value="agotado" {% if request.GET.stock == 'agotado' %}selected{% endif %}>
+                                Agotado
+                            </option>
+                            <option value="bajo" {% if request.GET.stock == 'bajo' %}selected{% endif %}>
+                                Stock bajo (&lt; 10)
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Sort Options -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <i class="fas fa-sort me-2"></i>
+                        Ordenar por
+                    </label>
+                    <div class="sort-container">
+                        <select name="orden" class="form-control-modern">
+                            <option value="">Relevancia</option>
+                            <option value="nombre_asc" {% if request.GET.orden == 'nombre_asc' %}selected{% endif %}>
+                                Nombre A-Z
+                            </option>
+                            <option value="nombre_desc" {% if request.GET.orden == 'nombre_desc' %}selected{% endif %}>
+                                Nombre Z-A
+                            </option>
+                            <option value="precio_asc" {% if request.GET.orden == 'precio_asc' %}selected{% endif %}>
+                                Precio menor
+                            </option>
+                            <option value="precio_desc" {% if request.GET.orden == 'precio_desc' %}selected{% endif %}>
+                                Precio mayor
+                            </option>
+                            <option value="stock_asc" {% if request.GET.orden == 'stock_asc' %}selected{% endif %}>
+                                Menos stock
+                            </option>
+                            <option value="stock_desc" {% if request.GET.orden == 'stock_desc' %}selected{% endif %}>
+                                Más stock
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="filter-actions">
+                <button type="submit" class="btn-filter-apply">
+                    <i class="fas fa-filter me-2"></i>
+                    Aplicar Filtros
+                </button>
+                
+                {% if search_query or categoria_seleccionada or request.GET.precio_min or request.GET.precio_max or request.GET.stock or request.GET.orden %}
+                <button type="button" class="btn-filter-clear" onclick="clearAllFilters()">
+                    <i class="fas fa-times me-2"></i>
+                    Limpiar Filtros
+                </button>
+                {% endif %}
+
+                <div class="results-info">
+                    <span class="results-count">
+                        <i class="fas fa-box me-1"></i>
+                        {{ materiales|length }} material{{ materiales|length|pluralize:"es" }} encontrado{{ materiales|length|pluralize:"s" }}
+                    </span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Active Filters Display -->
+{% if search_query or categoria_seleccionada or request.GET.precio_min or request.GET.precio_max or request.GET.stock or request.GET.orden %}
+<div class="active-filters mb-3">
+    <h6 class="active-filters-title">
+        <i class="fas fa-filter me-2"></i>
+        Filtros activos:
+    </h6>
+    <div class="active-filters-list">
+        {% if search_query %}
+        <span class="filter-tag">
+            Búsqueda: "{{ search_query }}"
+            <button type="button" class="filter-tag-remove" onclick="removeFilter('search')">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>
+        {% endif %}
+
+        {% if categoria_seleccionada %}
+        <span class="filter-tag">
+            Categoría activa
+            <button type="button" class="filter-tag-remove" onclick="removeFilter('categoria')">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>
+        {% endif %}
+
+        {% if request.GET.precio_min or request.GET.precio_max %}
+        <span class="filter-tag">
+            Precio: ${{ request.GET.precio_min|default:"0" }} - ${{ request.GET.precio_max|default:"∞" }}
+            <button type="button" class="filter-tag-remove" onclick="removeFilter('precio_min', 'precio_max')">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>
+        {% endif %}
+
+        {% if request.GET.stock %}
+        <span class="filter-tag">
+            Stock: {{ request.GET.stock|title }}
+            <button type="button" class="filter-tag-remove" onclick="removeFilter('stock')">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>
+        {% endif %}
+
+        {% if request.GET.orden %}
+        <span class="filter-tag">
+            Orden: {{ request.GET.orden|title }}
+            <button type="button" class="filter-tag-remove" onclick="removeFilter('orden')">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+/* ================================
+   MODERN FILTER SYSTEM STYLES 
+   ================================ */
+
+.modern-filter-container {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.modern-filter-container:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filter-title {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.btn-filter-toggle {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #6366f1;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-filter-toggle:hover {
+    background: rgba(99, 102, 241, 0.3);
+    transform: scale(1.05);
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.search-group {
+    grid-column: 1 / -1;
+    max-width: 500px;
+}
+
+.filter-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.search-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.form-control-modern {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-control-modern:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    outline: none;
+    color: #ffffff;
+}
+
+.form-control-modern::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-input {
+    padding-right: 3rem !important;
+}
+
+.search-actions {
+    position: absolute;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-clear-search {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-clear-search:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.category-select-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.category-select {
+    flex: 1;
+}
+
+.btn-category-actions {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #6366f1;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-category-actions:hover {
+    background: rgba(99, 102, 241, 0.3);
+    color: #8b5cf6;
+}
+
+.dropdown-menu {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+}
+
+.dropdown-item {
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.price-input {
+    flex: 1;
+    min-width: 80px;
+}
+
+.price-separator {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+}
+
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-filter-apply {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-filter-apply:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.btn-filter-clear {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-filter-clear:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #ef4444;
+    transform: translateY(-2px);
+}
+
+.results-info {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.results-count {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Active Filters */
+.active-filters {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.active-filters-title {
+    color: #8b5cf6;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.active-filters-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.filter-tag {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.filter-tag:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.filter-tag-remove {
+    background: rgba(239, 68, 68, 0.2);
+    border: none;
+    color: #ef4444;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.7rem;
+}
+
+.filter-tag-remove:hover {
+    background: #ef4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .search-group {
+        grid-column: 1;
+    }
+
+    .filter-content {
+        display: none;
+    }
+
+    .filter-content.show {
+        display: block;
+    }
+
+    .filter-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+
+    .btn-filter-apply,
+    .btn-filter-clear {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .results-info {
+        text-align: center;
+    }
+
+    .active-filters-list {
+        justify-content: center;
+    }
+
+    .filter-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    .category-select-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .price-inputs {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .price-separator {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .modern-filter-container {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .filter-title {
+        font-size: 1.25rem;
+    }
+}
+</style>
+
+<script>
+// Enhanced filter functionality
+function toggleMobileFilters() {
+    const filterContent = document.getElementById('filterContent');
+    const toggleBtn = document.querySelector('.btn-filter-toggle');
+    
+    filterContent.classList.toggle('show');
+    
+    const isVisible = filterContent.classList.contains('show');
+    toggleBtn.innerHTML = isVisible ? '<i class="fas fa-times"></i>' : '<i class="fas fa-sliders-h"></i>';
+}
+
+function clearSearch() {
+    const searchInput = document.querySelector('input[name="search"]');
+    searchInput.value = '';
+    searchInput.focus();
+    performSearch();
+}
+
+function clearAllFilters() {
+    const form = document.getElementById('filterForm');
+    const inputs = form.querySelectorAll('input, select');
+    
+    inputs.forEach(input => {
+        if (input.type === 'search' || input.type === 'text' || input.type === 'number') {
+            input.value = '';
+        } else if (input.tagName === 'SELECT') {
+            input.selectedIndex = 0;
+        }
+    });
+    
+    performSearch();
+}
+
+function removeFilter(...filterNames) {
+    const url = new URL(window.location);
+    
+    filterNames.forEach(filterName => {
+        url.searchParams.delete(filterName);
+    });
+    
+    window.location.href = url.toString();
+}
+
+function performSearch() {
+    const searchInput = document.getElementById('searchInput');
+    const categoriaSelect = document.getElementById('categoriaSelect');
+    const searchTerm = searchInput.value;
+    const categoria = categoriaSelect.value;
+    const currentUrl = new URL(window.location.href);
+    
+    if (searchTerm) {
+        currentUrl.searchParams.set('search', searchTerm);
+    } else {
+        currentUrl.searchParams.delete('search');
+    }
+    
+    if (categoria) {
+        currentUrl.searchParams.set('categoria', categoria);
+    } else {
+        currentUrl.searchParams.delete('categoria');
+    }
+
+    // Show loading state
+    if (typeof showLoading === 'function') {
+        showLoading(true);
+    }
+
+    fetch(currentUrl, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newCards = doc.querySelector('.card-container');
+        
+        if (newCards) {
+            document.querySelector('.card-container').innerHTML = newCards.innerHTML;
+            window.history.pushState({}, '', currentUrl);
+        }
+        
+        if (typeof showLoading === 'function') {
+            showLoading(false);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('Error al realizar la búsqueda', 'error');
+        }
+        
+        if (typeof showLoading === 'function') {
+            showLoading(false);
+        }
+    });
+}
+
+// Enhanced initialization
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const categoriaSelect = document.getElementById('categoriaSelect');
+    const form = document.getElementById('filterForm');
+    let searchTimeout;
+
+    // Enhanced search with debounce
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        
+        // Add visual feedback
+        this.style.borderColor = 'rgba(99, 102, 241, 0.5)';
+        
+        searchTimeout = setTimeout(() => {
+            this.style.borderColor = '';
+            if (this.value.length === 0 || this.value.length >= 2) {
+                performSearch();
+            }
+        }, 500);
+    });
+
+    // Category change handler
+    categoriaSelect.addEventListener('change', function() {
+        performSearch();
+    });
+
+    // Enter key handler
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            performSearch();
+        }
+    });
+
+    // Form submission handler
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+
+    // Auto-submit on other filter changes
+    const otherSelects = form.querySelectorAll('select:not(#categoriaSelect)');
+    const numberInputs = form.querySelectorAll('input[type="number"]');
+    
+    otherSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            setTimeout(performSearch, 100);
+        });
+    });
+
+    numberInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.value !== this.defaultValue) {
+                performSearch();
+            }
+        });
+    });
+});
+</script>

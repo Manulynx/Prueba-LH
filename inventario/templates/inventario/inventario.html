@@ -1,0 +1,343 @@
+{% extends "gestorapp/base.html" %}
+{% load static %}
+
+{% block title %}Inventario Moderno - Gestión de Pedidos{% endblock %}
+
+{% block content %}
+<!-- Modern CSS Loading -->
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+<!-- Modern Inventory Container -->
+<div class="container-fluid mt-4" style="max-width: 1400px;">
+    <!-- Enhanced Category Filter -->
+    {% include "inventario/includes/categoria_filter.html" %}
+
+    <!-- Modern Materials Grid -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card-container">
+                {% for material in materiales %}
+                    {% include "inventario/includes/material_card_modern.html" %}
+                {% empty %}
+                    <div class="col-12">
+                        <div class="glass-card text-center py-5">
+                            <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                            <h3 class="text-white mb-2">No hay materiales disponibles</h3>
+                            <p class="text-muted">No se encontraron materiales que coincidan con los criterios de búsqueda.</p>
+                            {% if user.is_superuser %}
+                            <a href="{% url 'editar_inventario' %}" class="btn btn-primary-modern mt-3">
+                                <i class="fas fa-plus me-2"></i>
+                                Agregar Material
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keep existing modals and functionality -->
+{% if request.user.is_authenticated %}
+    {% include "inventario/includes/cart_button.html" %}
+    {% include "inventario/includes/cart_modal.html" %}
+{% endif %}
+
+<!-- Modal Pedidos Pendientes -->
+<div class="modal fade" id="pedidosPendientesModal" tabindex="-1">
+    <div class="modal-dialog modal-modern">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-clock me-2"></i>
+                    Pedidos Pendientes
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="listaPedidosPendientes">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-modern" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Images Modal -->
+<div class="modal fade" id="imagenesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-images me-2"></i>
+                    Galería de Imágenes
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="imagenesCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        <!-- Images loaded dynamically -->
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#imagenesCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#imagenesCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "inventario/includes/scripts.html" %}
+{% include "inventario/includes/styles.html" %}
+
+<style>
+/* Additional modern enhancements */
+.container-fluid {
+    padding: 0 1rem;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced modal styles */
+.modal-modern .modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-modern .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+}
+
+.modal-modern .modal-title {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.modal-modern .modal-body {
+    padding: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.modal-modern .modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+}
+
+/* Enhanced carousel styles */
+.carousel-item img {
+    max-height: 75vh;
+    width: auto;
+    margin: 0 auto;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    width: 50px;
+    height: 50px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    opacity: 0;
+    transition: all 0.3s ease;
+    margin: 0 20px;
+}
+
+.carousel-control-prev {
+    left: 0;
+}
+
+.carousel-control-next {
+    right: 0;
+}
+
+.carousel:hover .carousel-control-prev,
+.carousel:hover .carousel-control-next {
+    opacity: 1;
+}
+
+.carousel-control-prev:hover,
+.carousel-control-next:hover {
+    background: rgba(99, 102, 241, 0.8);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+/* Loading animation for cards */
+@keyframes cardLoadIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.card-modern-material {
+    animation: cardLoadIn 0.6s ease-out forwards;
+}
+
+.card-modern-material:nth-child(1) { animation-delay: 0.1s; }
+.card-modern-material:nth-child(2) { animation-delay: 0.2s; }
+.card-modern-material:nth-child(3) { animation-delay: 0.3s; }
+.card-modern-material:nth-child(4) { animation-delay: 0.4s; }
+.card-modern-material:nth-child(5) { animation-delay: 0.5s; }
+.card-modern-material:nth-child(6) { animation-delay: 0.6s; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 0 0.5rem;
+    }
+    
+    .modal-xl {
+        margin: 0.5rem;
+    }
+    
+    .carousel-item img {
+        max-height: 60vh;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced initialization
+    initializeModernInventory();
+    
+    // Auto-open cart if requested
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openCart') === 'true') {
+        const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+        cartModal.show();
+    }
+
+    // Initialize lazy loading for better performance
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy');
+                    imageObserver.unobserve(img);
+                }
+            });
+        });
+
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
+    }
+});
+
+function initializeModernInventory() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Initialize popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+
+    // Initialize modals
+    window.pedidosPendientesModal = new bootstrap.Modal(document.getElementById('pedidosPendientesModal'), {
+        keyboard: true,
+        backdrop: true
+    });
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // ESC to close any open modal
+        if (e.key === 'Escape') {
+            const openModals = document.querySelectorAll('.modal.show');
+            openModals.forEach(modal => {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) modalInstance.hide();
+            });
+        }
+        
+        // Ctrl+F to focus search (if exists)
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            const searchInput = document.querySelector('input[type="search"], input[name="search"]');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    });
+
+    // Enhanced error handling
+    window.addEventListener('error', function(e) {
+        console.error('Global error:', e);
+        showToast('Ha ocurrido un error inesperado', 'danger');
+    });
+
+    // Progressive enhancement for network status
+    if ('navigator' in window && 'onLine' in navigator) {
+        window.addEventListener('online', () => {
+            showToast('Conexión restaurada', 'success');
+        });
+
+        window.addEventListener('offline', () => {
+            showToast('Sin conexión a internet', 'warning');
+        });
+    }
+}
+
+// Enhanced performance monitoring
+if ('performance' in window) {
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            const loadTime = perfData.loadEventEnd - perfData.loadEventStart;
+            
+            if (loadTime > 3000) {
+                console.warn('Slow page load detected:', loadTime + 'ms');
+            }
+        }, 0);
+    });
+}
+</script>
+
+{% endblock %}

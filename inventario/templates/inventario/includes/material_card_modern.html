@@ -1,0 +1,418 @@
+{% load static %}
+
+<div class="card-modern-material animate-fade-in-up" data-material-id="{{ material.id }}">
+    <!-- Category Badge -->
+    {% if material.categoria %}
+    <div class="category-badge">
+        <i class="fas fa-tag me-1"></i>
+        {{ material.categoria.nombre }}
+    </div>
+    {% endif %}
+
+    <!-- Offer and Featured Ribbons -->
+    {% if material.en_oferta and material.precio_oferta %}
+    <div class="ribbon-wrapper">
+        <div class="ribbon">OFERTA</div>
+    </div>
+    {% endif %}
+    {% if material.destacado %}
+    <div class="featured-star">
+        <i class="fas fa-star"></i>
+    </div>
+    {% endif %}
+
+    <!-- Enhanced Image Container -->
+    <div class="card-img-container-modern">
+        {% if material.imagen and material.imagen.url %}
+            <img src="{{ material.imagen.url }}" 
+                 alt="{{ material.nombre }}" 
+                 class="card-img-top-modern"
+                 loading="lazy"
+                 onerror="this.src='{% static 'img/no-image.png' %}'">
+        {% else %}
+            <img src="{% static 'img/no-image.png' %}" 
+                 alt="Sin imagen" 
+                 class="card-img-top-modern"
+                 loading="lazy">
+        {% endif %}
+
+        <!-- Overlay with Quick Actions -->
+        <div class="card-overlay-modern">
+            <div class="overlay-actions">
+                <a href="#" class="overlay-btn" 
+                   onclick="mostrarImagenesModal('{{ material.id }}')"
+                   title="Ver imágenes">
+                    <i class="fas fa-images"></i>
+                </a>
+                
+                {% if material.ficha_tecnica %}
+                    <a href="{{ material.ficha_tecnica.url }}" 
+                       class="overlay-btn" 
+                       target="_blank"
+                       title="Ver ficha técnica">
+                        <i class="fas fa-file-pdf"></i>
+                    </a>
+                {% endif %}
+                
+                {% if user.is_authenticated %}
+                <a href="#" class="overlay-btn" 
+                   onclick="mostrarPedidosPendientes('{{ material.id }}')"
+                   title="Ver pedidos pendientes">
+                    <i class="fas fa-clock"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Card Body -->
+    <div class="card-body-modern">
+        <h5 class="card-title-modern" title="{{ material.nombre }}">
+            {{ material.nombre }}
+        </h5>
+
+        <!-- Information Grid -->
+        <div class="card-info-grid">
+            <div class="info-item">
+                <span class="info-label">Precio</span>
+                <span class="info-value">
+                    {% if material.en_oferta and material.precio_oferta %}
+                        <span style="text-decoration: line-through; color: rgba(255,255,255,0.5); font-size: 0.8rem;">
+                            ${{ material.precio|floatformat:2 }}
+                        </span>
+                        <span class="price-highlight">
+                            ${{ material.precio_oferta|floatformat:2 }}
+                        </span>
+                        <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">
+                            -{{ material.descuento_porcentaje|floatformat:0 }}%
+                        </span>
+                    {% else %}
+                        <span class="price-highlight">
+                            ${{ material.precio|floatformat:2 }}
+                        </span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">Stock</span>
+                <span class="info-value">
+                    <span class="stock-indicator {% if material.cantidad > 50 %}stock-high{% elif material.cantidad > 10 %}stock-medium{% else %}stock-low{% endif %}">
+                        <i class="fas fa-box me-1"></i>
+                        {{ material.cantidad }}
+                    </span>
+                </span>
+            </div>
+
+            {% if material.codigo %}
+            <div class="info-item">
+                <span class="info-label">Código</span>
+                <span class="info-value">{{ material.codigo }}</span>
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <div class="info-item">
+                <span class="info-label">En Pedidos</span>
+                <span class="info-value">
+                    <span class="badge bg-warning text-dark">
+                        {{ material.get_cantidad_en_pedidos }}
+                    </span>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modern Card Footer -->
+    <div class="card-footer-modern">
+        {% if user.is_authenticated %}
+            <div class="quantity-selector">
+                <label class="quantity-label">Cantidad:</label>
+                <div class="quantity-input-group">
+                    <button type="button" 
+                            class="quantity-btn" 
+                            onclick="adjustQuantity('{{ material.id }}', -1)"
+                            aria-label="Disminuir cantidad">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <input type="number" 
+                           id="cantidad-{{ material.id }}" 
+                           class="quantity-input" 
+                           value="1" 
+                           min="1" 
+                           max="{{ material.cantidad }}"
+                           aria-label="Cantidad para {{ material.nombre }}">
+                    <button type="button" 
+                            class="quantity-btn" 
+                            onclick="adjustQuantity('{{ material.id }}', 1)"
+                            aria-label="Aumentar cantidad">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="button" 
+                    class="btn-add-cart-modern" 
+                    data-material-id="{{ material.id }}"
+                    onclick="agregarAlCarro(this)"
+                    {% if material.cantidad == 0 %}disabled{% endif %}>
+                <i class="fas fa-cart-plus me-2"></i>
+                {% if material.cantidad == 0 %}
+                    Sin Stock
+                {% else %}
+                    Agregar al Pedido
+                {% endif %}
+            </button>
+        {% else %}
+            <div style="text-align: center; padding: 1rem 0; color: rgba(255, 255, 255, 0.6);">
+                <i class="fas fa-lock me-2"></i>
+                Inicia sesión para realizar pedidos
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Enhanced quantity adjustment
+function adjustQuantity(materialId, change) {
+    const input = document.getElementById(`cantidad-${materialId}`);
+    const currentValue = parseInt(input.value) || 1;
+    const maxValue = parseInt(input.max) || 999;
+    const minValue = parseInt(input.min) || 1;
+    
+    let newValue = currentValue + change;
+    newValue = Math.max(minValue, Math.min(maxValue, newValue));
+    
+    input.value = newValue;
+    
+    // Add visual feedback
+    input.style.transform = 'scale(1.05)';
+    setTimeout(() => {
+        input.style.transform = 'scale(1)';
+    }, 150);
+}
+
+// Enhanced add to cart function (keeping original functionality)
+function agregarAlCarro(button) {
+    const materialId = button.dataset.materialId;
+    const cantidadInput = document.getElementById(`cantidad-${materialId}`);
+    const cantidad = parseInt(cantidadInput.value);
+
+    if (isNaN(cantidad) || cantidad < 1) {
+        showToast('Por favor ingrese una cantidad válida', 'danger');
+        return;
+    }
+
+    // Visual feedback on button
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Agregando...';
+    button.disabled = true;
+
+    fetch(`/carro/actualizar/${materialId}/${cantidad}/`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Success feedback
+            button.innerHTML = '<i class="fas fa-check me-2"></i>¡Agregado!';
+            button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+            // Update cart modal and counter
+            updateCartModal();
+            const cartBadge = document.querySelector('#cartButton .badge');
+            if (cartBadge) {
+                cartBadge.textContent = data.cart_count;
+            }
+
+            showToast('Material agregado al carrito', 'success');
+            cantidadInput.value = 1;
+
+            // Reset button after delay
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                button.style.background = '';
+            }, 2000);
+        } else {
+            button.innerHTML = originalText;
+            button.disabled = false;
+            showToast(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = originalText;
+        button.disabled = false;
+        showToast('Error al agregar al carrito', 'danger');
+    });
+}
+
+// Enhanced notification function
+function showToast(message, type = 'success') {
+    const bgColor = type === 'success' ? '#10b981' : 
+                   type === 'danger' ? '#ef4444' : 
+                   type === 'warning' ? '#f59e0b' : '#06b6d4';
+    
+    Toastify({
+        text: message,
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        backgroundColor: bgColor,
+        stopOnFocus: true,
+        style: {
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+        }
+    }).showToast();
+}
+
+// Update cart modal function
+function updateCartModal() {
+    fetch('/carro/widget/', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const cartModal = document.querySelector('#cartModal .modal-body');
+        if (cartModal) {
+            cartModal.innerHTML = html;
+        }
+
+        const carroWidget = document.querySelector('#carroWidget');
+        if (carroWidget) {
+            carroWidget.innerHTML = html;
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Enhanced image modal function (keeping original functionality)
+function mostrarImagenesModal(materialId) {
+    const modal = document.getElementById('imagenesModal');
+    const carouselInner = modal.querySelector('.carousel-inner');
+    const carousel = modal.querySelector('#imagenesCarousel');
+    const prevButton = carousel.querySelector('.carousel-control-prev');
+    const nextButton = carousel.querySelector('.carousel-control-next');
+
+    // Hide controls by default
+    prevButton.style.display = 'none';
+    nextButton.style.display = 'none';
+
+    // Show loading state
+    carouselInner.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-light" role="status"></div></div>';
+
+    // Show modal
+    const imagenesModal = new bootstrap.Modal(modal);
+    imagenesModal.show();
+
+    fetch(`/inventario/material/${materialId}/imagenes/`)
+        .then(response => response.json())
+        .then(data => {
+            let html = '';
+
+            // Add main image
+            html += `
+                <div class="carousel-item active">
+                    <img src="${data.imagen.url}" class="d-block" alt="Imagen principal">
+                </div>
+            `;
+
+            // Add secondary images and show controls only if there are secondary images
+            if (data.imagenes_secundarias && data.imagenes_secundarias.length > 0) {
+                data.imagenes_secundarias.forEach(imagen => {
+                    html += `
+                        <div class="carousel-item">
+                            <img src="${imagen.url}"
+                                 class="d-block"
+                                 alt="Imagen secundaria">
+                        </div>
+                    `;
+                });
+
+                // Show carousel controls only if there are multiple images
+                prevButton.style.display = 'flex';
+                nextButton.style.display = 'flex';
+            }
+
+            carouselInner.innerHTML = html;
+
+            // Initialize carousel
+            const carouselInstance = new bootstrap.Carousel(carousel, {
+                interval: false,
+                keyboard: true,
+                touch: true,
+                wrap: true
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            carouselInner.innerHTML = '<p class="text-center text-danger p-5">Error al cargar las imágenes.</p>';
+        });
+}
+
+// Pedidos pendientes function (keeping original functionality)
+function mostrarPedidosPendientes(materialId) {
+    const modal = document.getElementById('pedidosPendientesModal');
+    const listaPedidos = document.getElementById('listaPedidosPendientes');
+    
+    if (!modal || !listaPedidos) {
+        console.error('Modal elements not found');
+        return;
+    }
+
+    listaPedidos.innerHTML = '<div class="text-center"><div class="spinner-border text-light" role="status"></div></div>';
+
+    if (typeof pedidosPendientesModal !== 'undefined') {
+        pedidosPendientesModal.show();
+    } else {
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+    }
+
+    fetch(`/inventario/pedidos-pendientes/${materialId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.pedidos && data.pedidos.length > 0) {
+                let html = '<div class="list-group bg-dark">';
+                data.pedidos.forEach(pedido => {
+                    html += `
+                        <div class="list-group-item bg-dark text-white border-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Pedido #${pedido.id}</h6>
+                                    <p class="mb-1 text-muted">Gestor: ${pedido.gestor}</p>
+                                    <small>Cantidad: ${pedido.cantidad}</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <small class="text-muted me-2">${pedido.fecha}</small>
+                                    {% if user.is_superuser %}
+                                    <a href="/pedidos/detalle/${pedido.id}" class="btn btn-info btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Ver
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                listaPedidos.innerHTML = html;
+            } else {
+                listaPedidos.innerHTML = '<p class="text-center">No hay pedidos pendientes para este material.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            listaPedidos.innerHTML = '<p class="text-center text-danger">Error al cargar los pedidos pendientes.</p>';
+        });
+}
+</script>
