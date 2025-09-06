@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-yujkf=!kd56hv9
 DEBUG = True
 
 ALLOWED_HOSTS = ['ricardo397.pythonanywhere.com',
-                 'lynxiyo.pythonanywhere.com'
+                 'lynxiyo.pythonanywhere.com',
                  'localhost',
                  '127.0.0.1']  # For testing only - restrict in production
 
